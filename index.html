@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ТН: Предписание</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
@@ -15,22 +15,16 @@
             --btn-text: #ffffff;
         }
 
-        body.dark-mode {
-            --bg-color: #1e1e1e;
-            --text-color: #ffffff;
-            --secondary-bg: #2c2c2c;
-            --hint-color: #aaaaaa;
-        }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--tg-theme-bg-color, var(--bg-color));
             color: var(--tg-theme-text-color, var(--text-color));
             padding: 16px;
             margin: 0;
+            padding-bottom: 80px; /* место под кнопку */
         }
 
-        h2 { font-size: 20px; margin-bottom: 20px; }
+        h2 { font-size: 20px; margin-bottom: 20px; margin-top: 0; }
         
         label {
             display: block;
@@ -50,7 +44,7 @@
             background-color: var(--tg-theme-secondary-bg-color, var(--secondary-bg));
             color: var(--tg-theme-text-color, var(--text-color));
             font-size: 16px;
-            -webkit-appearance: none;
+            -webkit-appearance: none; /* убирает стандартные стили iOS */
         }
 
         .axis-group {
@@ -61,46 +55,54 @@
 
         .hidden { display: none; }
 
-        .photo-btn {
-            margin-top: 20px;
-            background-color: #ff9f0a;
-            color: white;
-            text-align: center;
-            padding: 14px;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            display: block;
+        .hint-box {
+            background-color: #fff3cd;
+            color: #664d03;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 14px;
+            border: 1px solid #ffecb5;
+        }
+
+        /* Плавающая кнопка внизу (как в нативных приложениях) */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px 16px 20px;
+            background-color: var(--tg-theme-bg-color, var(--bg-color));
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            display: flex;
+            gap: 10px;
         }
 
         .main-btn {
-            margin-top: 30px;
-            margin-bottom: 40px;
-            width: 100%;
-            padding: 16px;
+            flex: 1;
+            padding: 14px;
             background-color: var(--tg-theme-button-color, var(--btn-color));
             color: var(--tg-theme-button-text-color, var(--btn-text));
             border: none;
             border-radius: 10px;
-            font-size: 17px;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
+            text-align: center;
         }
-
-        #photo-preview {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 10px;
-            margin-top: 10px;
-            display: none;
+        
+        .back-btn {
+            background-color: #efeff4;
+            color: #000;
+            width: 100px;
         }
     </style>
 </head>
 <body>
 
     <div id="step1">
-        <h2>🏗 Где нарушение?</h2>
+        <h2>🏗 Шаг 1: Место</h2>
         
         <label>Сооружение</label>
         <select id="building" onchange="updateAxes()">
@@ -126,13 +128,13 @@
             <option value="Подвал">Подвал</option>
         </select>
 
-        <label>Оси (Цифровые)</label>
+        <label>Оси (Цифры)</label>
         <div class="axis-group">
             <select id="axis_num_start"><option>-</option></select>
             <select id="axis_num_end"><option>-</option></select>
         </div>
 
-        <label>Оси (Буквенные)</label>
+        <label>Оси (Буквы)</label>
         <div class="axis-group">
             <select id="axis_let_start"><option>-</option></select>
             <select id="axis_let_end"><option>-</option></select>
@@ -151,36 +153,47 @@
             <option value="Оконная перемычка">Оконная перемычка</option>
         </select>
 
-        <label for="photo-input" class="photo-btn">📷 Сделать фото</label>
-        <input type="file" id="photo-input" accept="image/*" capture="environment" style="display: none;">
-        <img id="photo-preview" src="">
-
-        <button class="main-btn" onclick="nextStep()">Далее</button>
+        <div class="bottom-bar">
+            <button class="main-btn" onclick="nextStep()">Далее →</button>
+        </div>
     </div>
 
     <div id="step2" class="hidden">
-        <h2>📝 Детали и виновник</h2>
+        <h2>📝 Шаг 2: Нарушение</h2>
 
-        <label>Подрядчик (Кому выдать)</label>
+        <label>Подрядчик</label>
         <select id="contractor" onchange="checkContractor()">
             <option value="ПРОНТО">ООО «ПРОНТО»</option>
             <option value="СтройМонолит">ООО «СтройМонолит»</option>
             <option value="Строй Трейд">ООО «Строй Трейд»</option>
-            <option value="other">➕ Добавить новую...</option>
+            <option value="other">➕ Ввести вручную...</option>
         </select>
         
-        <input type="text" id="contractor_manual" class="hidden" placeholder="Введите название и реквизиты">
+        <input type="text" id="contractor_manual" class="hidden" placeholder="Название и реквизиты" style="margin-top:5px;">
 
         <label>Суть нарушения</label>
-        <textarea id="issue" placeholder="Опишите дефект... (можно оставить пустым и дописать в чате)"></textarea>
+        <textarea id="issue" rows="4" placeholder="Например: Отклонение от вертикали 15мм..."></textarea>
 
-        <button class="main-btn" onclick="sendData()">📤 Сформировать</button>
-        <button class="main-btn" style="background-color: #ff3b30; margin-top: 0;" onclick="prevStep()">Назад</button>
+        <div class="hint-box">
+            📸 <b>Фотофиксация:</b><br>
+            Сделайте фото камерой телефона сейчас. После нажатия "Сформировать" отправьте фото в чат с ботом.
+        </div>
+
+        <div class="bottom-bar">
+            <button class="main-btn back-btn" onclick="prevStep()">← Назад</button>
+            <button class="main-btn" onclick="sendData()">Сформировать ✅</button>
+        </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand();
+        tg.ready(); // Сообщаем, что приложение готово
+        tg.expand(); // На весь экран
+
+        // Если не в телеграме (для отладки в браузере)
+        if (!tg.initDataUnsafe || !tg.initDataUnsafe.query_id) {
+            console.log("Not in Telegram mode");
+        }
 
         // База данных осей
         const AXES_DB = {
@@ -222,7 +235,6 @@
             }
         };
 
-        // База подрядчиков
         const CONTRACTORS = {
             "ПРОНТО": "ООО «ПРОНТО», 123112, г. Москва, наб. Пресненская, д. 12 пом. 14/64. Договор субподряда №5930/01 от 13.01.2026 г.",
             "СтройМонолит": "ООО «СтройМонолит», 656066, г. Барнаул, ул. Островского, д. 49, пом. Н1. Договор подряда №5732/07 от 07.07.2025 г.",
@@ -253,30 +265,12 @@
         function checkContractor() {
             const val = document.getElementById('contractor').value;
             const manual = document.getElementById('contractor_manual');
-            if (val === 'other') {
-                manual.style.display = 'block';
-            } else {
-                manual.style.display = 'none';
-            }
+            manual.style.display = (val === 'other') ? 'block' : 'none';
         }
-
-        // Фото
-        document.getElementById('photo-input').addEventListener('change', function() {
-            const file = this.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = document.getElementById('photo-preview');
-                    img.src = e.target.result;
-                    img.style.display = 'block';
-                }
-                reader.readAsDataURL(file);
-            }
-        });
 
         function nextStep() {
             if (!document.getElementById('building').value) {
-                tg.showPopup({message: 'Выберите объект!'});
+                tg.showPopup({message: 'Сначала выберите объект!'});
                 return;
             }
             document.getElementById('step1').classList.add('hidden');
@@ -317,7 +311,13 @@
                 contractor_info: contractorData || "Подрядчик не выбран"
             };
 
-            tg.sendData(JSON.stringify(data));
+            try {
+                tg.sendData(JSON.stringify(data));
+                // На всякий случай закрываем, если sendData не закрыл (бывает на Android)
+                setTimeout(() => tg.close(), 1000); 
+            } catch (e) {
+                tg.showPopup({message: 'Ошибка отправки: ' + e.message});
+            }
         }
     </script>
 </body>
