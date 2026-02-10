@@ -2,215 +2,176 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ТН: Предписание</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ТН</title>
+    <!-- Загружаем скрипт Телеграма -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            font-family: sans-serif;
-            padding: 16px;
-            margin: 0;
-            padding-bottom: 150px; /* Большой отступ снизу */
-        }
-        
-        select, input, textarea {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-size: 16px;
-        }
-
-        .btn {
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            text-align: center;
-            display: block;
-            width: 100%;
-            margin-top: 10px;
-            cursor: pointer;
-        }
-
-        .btn-primary { background-color: #2481cc; color: #fff; }
-        .btn-add { background-color: #34c759; color: #fff; }
-        
-        /* КНОПКА ФОТО - ЯРКАЯ */
-        .btn-photo {
-            background-color: #ff9500;
-            color: #fff;
-            margin-bottom: 15px;
-        }
-
+        body { padding: 20px; font-family: sans-serif; padding-bottom: 100px; }
+        select, input, textarea { width: 100%; margin-bottom: 10px; padding: 10px; font-size: 16px; display: block; }
+        button { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; background: #2481cc; color: white; border: none; border-radius: 8px; margin-top: 10px; }
         .hidden { display: none; }
-        .axis-group { display: flex; gap: 5px; }
-        
-        .issue-card {
-            background: #f0f0f0;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            position: relative;
-        }
-        
-        .bottom-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: white;
-            padding: 15px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            display: flex;
-            gap: 10px;
-            z-index: 999;
-        }
+        .row { display: flex; gap: 5px; }
+        .item { background: #eee; padding: 10px; margin-bottom: 5px; border-radius: 5px; }
     </style>
 </head>
 <body>
 
     <!-- ШАГ 1 -->
-    <div id="step1">
-        <h3>Шаг 1: Объект</h3>
-        <select id="building" onchange="updateAxes()">
-            <option value="" disabled selected>Выберите объект...</option>
-            <option value="Блок-секция 1">Блок-секция 1</option>
-            <option value="Блок-секция 2">Блок-секция 2</option>
-            <option value="Блок-секция 3">Блок-секция 3</option>
-            <option value="Блок-секция 4">Блок-секция 4</option>
-            <option value="Блок-секция 5">Блок-секция 5</option>
-            <option value="Блок-секция 6">Блок-секция 6</option>
-            <option value="Блок-секция 7">Блок-секция 7</option>
-            <option value="Интернат">Интернат</option>
-            <option value="Тёплая стоянка">Тёплая стоянка</option>
-        </select>
-
+    <div id="screen1">
+        <h3>Объект</h3>
+        <select id="build"><option disabled selected>Выберите...</option></select>
+        
         <h3>Подрядчик</h3>
-        <select id="contractor" onchange="checkContractor()">
-            <option value="ПРОНТО">ООО «ПРОНТО»</option>
-            <option value="СтройМонолит">ООО «СтройМонолит»</option>
-            <option value="Строй Трейд">ООО «Строй Трейд»</option>
-            <option value="other">Другой...</option>
+        <select id="contr">
+            <option value="ПРОНТО">ПРОНТО</option>
+            <option value="СтройМонолит">СтройМонолит</option>
+            <option value="Строй Трейд">Строй Трейд</option>
         </select>
-        <input type="text" id="contractor_manual" class="hidden" placeholder="Реквизиты">
 
-        <button class="btn btn-primary" onclick="goToStep2()">Далее</button>
+        <button onclick="toScreen2()">ДАЛЕЕ</button>
     </div>
 
     <!-- ШАГ 2 -->
-    <div id="step2" class="hidden">
+    <div id="screen2" class="hidden">
         <h3>Новое замечание</h3>
-        
         <select id="floor">
-            <option value="1">1 этаж</option>
-            <option value="2">2 этаж</option>
-            <option value="3">3 этаж</option>
-            <option value="4">4 этаж</option>
+            <option>1 эт</option><option>2 эт</option><option>3 эт</option><option>4 эт</option>
         </select>
-
-        <div class="axis-group">
-            <select id="axis_num_start"><option>-</option></select>
-            <select id="axis_num_end"><option>-</option></select>
+        
+        <div class="row">
+            <select id="ax1"><option>-</option></select>
+            <select id="ax2"><option>-</option></select>
         </div>
-        <div class="axis-group" style="margin-top:5px">
-            <select id="axis_let_start"><option>-</option></select>
-            <select id="axis_let_end"><option>-</option></select>
+        <div class="row">
+            <select id="ax3"><option>-</option></select>
+            <select id="ax4"><option>-</option></select>
         </div>
 
-        <select id="structure" style="margin-top:10px">
-            <option value="Стена">Стена</option>
-            <option value="Колонна">Колонна</option>
-            <option value="Плита">Плита</option>
+        <select id="str">
+            <option>Стена</option><option>Колонна</option><option>Плита</option><option>Балка</option>
         </select>
 
-        <textarea id="issue" rows="2" placeholder="Описание..."></textarea>
+        <textarea id="txt" placeholder="Нарушение..."></textarea>
+        
+        <button style="background:orange" onclick="add()">➕ ДОБАВИТЬ</button>
+        
+        <div id="list" style="margin-top:20px"></div>
 
-        <!-- КНОПКА ФОТО -->
-        <label for="cam" class="btn btn-photo">📸 СНЯТЬ ФОТО</label>
-        <input type="file" id="cam" accept="image/*" capture="environment" style="display:none">
-
-        <button class="btn btn-add" onclick="addIssue()">➕ Добавить</button>
-
-        <hr>
-        <div id="issues-list"></div>
-
-        <div class="bottom-bar">
-            <button class="btn" style="background:#ddd; width:30%" onclick="backToStep1()">Назад</button>
-            <button class="btn btn-primary" style="width:70%" onclick="sendAll()">СФОРМИРОВАТЬ</button>
+        <div style="position:fixed; bottom:0; left:0; width:100%; padding:10px; background:white; box-shadow:0 -2px 5px #ccc; display:flex; gap:10px; box-sizing:border-box;">
+            <button style="background:#ccc; width:30%" onclick="back()">НАЗАД</button>
+            <button style="width:70%" onclick="send()">СФОРМИРОВАТЬ</button>
         </div>
     </div>
 
     <script>
+        // Инициализация
         const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
-
-        let ISSUES = [];
         
-        // (Оси и подрядчики - сокращенно для примера, на GitHub будет полная версия)
-        const AXES_DB = { "Блок-секция 1": { num: ["1","2"], let: ["A","B"] } }; 
-        const CONTRACTORS = { "ПРОНТО": "ООО ПРОНТО..." };
+        // ДАННЫЕ
+        const DB = {
+            "Блок-секция 1": { n: ["2","3","4","5"], l: ["С","У","Ф","Ш","Э","Ю","Я","ББ"] },
+            "Блок-секция 2": { n: ["1","2","3","4","5"], l: ["Е","И","К","Л","М","Н","П","Р"] },
+            "Блок-секция 3": { n: ["6","7","8","9","10","11","12","13","14","15"], l: ["К","Л","М","Н","П","Р","С","Т","У"] },
+            "Блок-секция 4": { n: ["6","7","8","9","10","11","12","13","14","15"], l: ["Е","Ж","И","К"] },
+            "Блок-секция 5": { n: ["11","12","13","14","15","16","17","18","19"], l: ["У","Ф","Ш","Э","Ю","Я","АА"] },
+            "Блок-секция 6": { n: ["16","17","18","19","20","21","22"], l: ["И","К","Л","М","Н","П","Р","С","Т"] },
+            "Блок-секция 7": { n: ["16","17","18","19","20","21","22"], l: ["А","Б","В","Г","Д","Е","Ж"] },
+            "Интернат": { n: ["1","2","3","4"], l: ["А","Б","В","Г","Д","Е","Ж","И","К"] },
+            "Тёплая стоянка": { n: ["1","2"], l: ["А","Б","В"] }
+        };
 
-        function goToStep2() {
-            document.getElementById('step1').classList.add('hidden');
-            document.getElementById('step2').classList.remove('hidden');
-        }
-        function backToStep1() {
-            document.getElementById('step2').classList.add('hidden');
-            document.getElementById('step1').classList.remove('hidden');
+        const CONTRACTORS_FULL = {
+            "ПРОНТО": "ООО «ПРОНТО», 123112, г. Москва...",
+            "СтройМонолит": "ООО «СтройМонолит», 656066, г. Барнаул...",
+            "Строй Трейд": "ООО «Строй Трейд», 649100, РА..."
+        };
+
+        let items = [];
+
+        // Заполнение списка зданий
+        const selBuild = document.getElementById('build');
+        for(let k in DB) {
+            let opt = document.createElement('option');
+            opt.text = k;
+            selBuild.add(opt);
         }
 
-        function addIssue() {
-            const txt = document.getElementById('issue').value;
-            if(!txt) { alert("Напишите замечание!"); return; }
+        // Обновление осей
+        selBuild.onchange = function() {
+            let d = DB[this.value];
+            fill('ax1', d.n); fill('ax2', d.n);
+            fill('ax3', d.l); fill('ax4', d.l);
+        };
+
+        function fill(id, arr) {
+            let s = document.getElementById(id);
+            s.innerHTML = '<option>-</option>';
+            arr.forEach(v => {
+                let o = document.createElement('option');
+                o.text = v;
+                s.add(o);
+            });
+        }
+
+        function toScreen2() {
+            if(selBuild.selectedIndex === 0) return alert("Выберите объект!");
+            document.getElementById('screen1').classList.add('hidden');
+            document.getElementById('screen2').classList.remove('hidden');
+        }
+
+        function back() {
+            document.getElementById('screen2').classList.add('hidden');
+            document.getElementById('screen1').classList.remove('hidden');
+        }
+
+        function add() {
+            let txt = document.getElementById('txt').value;
+            if(!txt) return alert("Напишите нарушение");
             
-            ISSUES.push({
+            let axes = getAx('ax1') + (getAx('ax2') ? '-'+getAx('ax2') : '') + 
+                       ' / ' + getAx('ax3') + (getAx('ax4') ? '-'+getAx('ax4') : '');
+
+            items.push({
                 floor: document.getElementById('floor').value,
-                axes: "1-2/А-Б", // Заглушка для теста, реальный код возьмет из полей
-                structure: document.getElementById('structure').value,
+                axes: axes,
+                structure: document.getElementById('str').value,
                 issue: txt
             });
             
             render();
-            document.getElementById('issue').value = "";
+            document.getElementById('txt').value = "";
+        }
+
+        function getAx(id) {
+            let v = document.getElementById(id).value;
+            return v === '-' ? '' : v;
         }
 
         function render() {
-            const div = document.getElementById('issues-list');
-            div.innerHTML = ISSUES.map((i, idx) => 
-                `<div class="issue-card">#${idx+1} ${i.structure}: ${i.issue}</div>`
+            document.getElementById('list').innerHTML = items.map((i,x) => 
+                `<div class="item"><b>${x+1}. ${i.structure}</b> (${i.floor}, ${i.axes})<br>${i.issue}</div>`
             ).join('');
         }
 
-        function sendAll() {
-            // DEBUG
-            // alert("Кнопка нажата! Замечаний: " + ISSUES.length);
-
-            if (ISSUES.length === 0) {
-                alert("Список пуст!");
-                return;
-            }
-
-            const data = {
+        function send() {
+            if(items.length === 0) return alert("Список пуст");
+            
+            let cName = document.getElementById('contr').value;
+            
+            let data = {
                 action: "create_prescription_multi",
-                building: document.getElementById('building').value || "Тест",
-                contractor_info: "Тест",
-                items: ISSUES
+                building: selBuild.value,
+                contractor_info: CONTRACTORS_FULL[cName] || cName,
+                items: items
             };
 
             try {
                 tg.sendData(JSON.stringify(data));
-                // alert("sendData вызван!");
-            } catch (e) {
-                alert("Ошибка: " + e.message);
+            } catch(e) {
+                alert("Ошибка TG: " + e);
             }
         }
-        
-        // Восстанавливаем полную БД осей при заливке
     </script>
 </body>
 </html>
