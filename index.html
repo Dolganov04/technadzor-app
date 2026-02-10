@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ТН: Предписание</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #000000;
+            --secondary-bg: #f5f5f5;
+            --hint-color: #888888;
+            --btn-color: #2481cc;
+            --btn-text: #ffffff;
+        }
+
+        body.dark-mode {
+            --bg-color: #1e1e1e;
+            --text-color: #ffffff;
+            --secondary-bg: #2c2c2c;
+            --hint-color: #aaaaaa;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color, var(--bg-color));
+            color: var(--tg-theme-text-color, var(--text-color));
+            padding: 16px;
+            margin: 0;
+        }
+
+        h2 { font-size: 20px; margin-bottom: 20px; }
+        
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--tg-theme-hint-color, var(--hint-color));
+        }
+
+        select, input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-sizing: border-box;
+            background-color: var(--tg-theme-secondary-bg-color, var(--secondary-bg));
+            color: var(--tg-theme-text-color, var(--text-color));
+            font-size: 16px;
+            -webkit-appearance: none;
+        }
+
+        .axis-group {
+            display: flex;
+            gap: 10px;
+        }
+        .axis-group select { width: 50%; }
+
+        .hidden { display: none; }
+
+        .photo-btn {
+            margin-top: 20px;
+            background-color: #ff9f0a;
+            color: white;
+            text-align: center;
+            padding: 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            display: block;
+        }
+
+        .main-btn {
+            margin-top: 30px;
+            margin-bottom: 40px;
+            width: 100%;
+            padding: 16px;
+            background-color: var(--tg-theme-button-color, var(--btn-color));
+            color: var(--tg-theme-button-text-color, var(--btn-text));
+            border: none;
+            border-radius: 10px;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #photo-preview {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="step1">
+        <h2>🏗 Где нарушение?</h2>
+        
+        <label>Сооружение</label>
+        <select id="building" onchange="updateAxes()">
+            <option value="" disabled selected>Выберите объект</option>
+            <option value="Блок-секция 1">Блок-секция 1</option>
+            <option value="Блок-секция 2">Блок-секция 2</option>
+            <option value="Блок-секция 3">Блок-секция 3</option>
+            <option value="Блок-секция 4">Блок-секция 4</option>
+            <option value="Блок-секция 5">Блок-секция 5</option>
+            <option value="Блок-секция 6">Блок-секция 6</option>
+            <option value="Блок-секция 7">Блок-секция 7</option>
+            <option value="Интернат">Интернат</option>
+            <option value="Тёплая стоянка">Тёплая стоянка</option>
+        </select>
+
+        <label>Этаж</label>
+        <select id="floor">
+            <option value="1">1 этаж</option>
+            <option value="2">2 этаж</option>
+            <option value="3">3 этаж</option>
+            <option value="4">4 этаж</option>
+            <option value="Кровля">Кровля</option>
+            <option value="Подвал">Подвал</option>
+        </select>
+
+        <label>Оси (Цифровые)</label>
+        <div class="axis-group">
+            <select id="axis_num_start"><option>-</option></select>
+            <select id="axis_num_end"><option>-</option></select>
+        </div>
+
+        <label>Оси (Буквенные)</label>
+        <div class="axis-group">
+            <select id="axis_let_start"><option>-</option></select>
+            <select id="axis_let_end"><option>-</option></select>
+        </div>
+
+        <label>Конструкция</label>
+        <select id="structure">
+            <option value="Стена">Стена</option>
+            <option value="Колонна">Колонна</option>
+            <option value="Балка перекрытия">Балка перекрытия</option>
+            <option value="Плита перекрытия">Плита перекрытия</option>
+            <option value="Парапет">Парапет</option>
+            <option value="Оконный проем">Оконный проем</option>
+            <option value="Стык колонны и балки">Стык колонны и балки</option>
+            <option value="Стык плиты и стены">Стык плиты и стены</option>
+            <option value="Оконная перемычка">Оконная перемычка</option>
+        </select>
+
+        <label for="photo-input" class="photo-btn">📷 Сделать фото</label>
+        <input type="file" id="photo-input" accept="image/*" capture="environment" style="display: none;">
+        <img id="photo-preview" src="">
+
+        <button class="main-btn" onclick="nextStep()">Далее</button>
+    </div>
+
+    <div id="step2" class="hidden">
+        <h2>📝 Детали и виновник</h2>
+
+        <label>Подрядчик (Кому выдать)</label>
+        <select id="contractor" onchange="checkContractor()">
+            <option value="ПРОНТО">ООО «ПРОНТО»</option>
+            <option value="СтройМонолит">ООО «СтройМонолит»</option>
+            <option value="Строй Трейд">ООО «Строй Трейд»</option>
+            <option value="other">➕ Добавить новую...</option>
+        </select>
+        
+        <input type="text" id="contractor_manual" class="hidden" placeholder="Введите название и реквизиты">
+
+        <label>Суть нарушения</label>
+        <textarea id="issue" placeholder="Опишите дефект... (можно оставить пустым и дописать в чате)"></textarea>
+
+        <button class="main-btn" onclick="sendData()">📤 Сформировать</button>
+        <button class="main-btn" style="background-color: #ff3b30; margin-top: 0;" onclick="prevStep()">Назад</button>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // База данных осей
+        const AXES_DB = {
+            "Блок-секция 1": {
+                num: ["2", "3", "4", "5"],
+                let: ["С", "У", "Ф", "Ф/1", "Ш", "Ш/1", "Э", "Э/1", "Ю", "Я", "ББ"]
+            },
+            "Блок-секция 2": {
+                num: ["1", "2", "3", "4", "5"],
+                let: ["Е", "И", "И/1", "К", "Л", "М", "М/2", "Н", "П", "Р"]
+            },
+            "Блок-секция 3": {
+                num: ["6", "7", "8", "9", "9/1", "10", "10/1", "11", "11/1", "12", "13", "14", "14/1", "15"],
+                let: ["К", "Л", "М", "Н", "П", "П/1", "Р", "С", "Т", "У"]
+            },
+            "Блок-секция 4": {
+                num: ["6", "7", "8", "9", "9/1", "10", "10/1", "11", "11/1", "12", "13", "14", "14/1", "15"],
+                let: ["Е", "Е/1", "Ж", "И", "К/1"]
+            },
+            "Блок-секция 5": {
+                num: ["11", "11/1", "12", "13", "14", "14/1", "15", "16", "16/1", "17", "18", "19"],
+                let: ["У", "У/1", "Ф", "Ш", "Э", "Ю", "Я", "АА", "ВВ", "ГГ", "ДД", "А/1"]
+            },
+            "Блок-секция 6": {
+                num: ["16", "17", "18", "19", "20", "21", "22"],
+                let: ["И", "К/1", "К", "Л", "М", "Н", "П", "П/1", "Р", "С", "Т"]
+            },
+            "Блок-секция 7": {
+                num: ["16", "16/1", "17", "18", "19", "20", "21", "22"],
+                let: ["А", "Б", "В", "В/1", "Г", "Д", "Д/1", "Е", "Е/1", "Ж"]
+            },
+            "Интернат": {
+                num: ["1", "2", "3", "4"],
+                let: ["А", "Б", "В", "Г", "Д", "Е", "Ж", "И", "К", "Л", "М", "Н", "П", "Р", "С", "Т", "У"]
+            },
+            "Тёплая стоянка": {
+                num: ["1", "2"],
+                let: ["А", "Б", "В"]
+            }
+        };
+
+        // База подрядчиков
+        const CONTRACTORS = {
+            "ПРОНТО": "ООО «ПРОНТО», 123112, г. Москва, наб. Пресненская, д. 12 пом. 14/64. Договор субподряда №5930/01 от 13.01.2026 г.",
+            "СтройМонолит": "ООО «СтройМонолит», 656066, г. Барнаул, ул. Островского, д. 49, пом. Н1. Договор подряда №5732/07 от 07.07.2025 г.",
+            "Строй Трейд": "ООО «Строй Трейд», 649100, РА, Майминский р-н, с. Майма, ул. Трудовая, д.34, кв. 2. Договор субподряда №5720/07 от 01.07.2025 г."
+        };
+
+        function updateAxes() {
+            const buildName = document.getElementById('building').value;
+            const data = AXES_DB[buildName];
+            
+            fillSelect('axis_num_start', data?.num || []);
+            fillSelect('axis_num_end', data?.num || []);
+            fillSelect('axis_let_start', data?.let || []);
+            fillSelect('axis_let_end', data?.let || []);
+        }
+
+        function fillSelect(id, values) {
+            const sel = document.getElementById(id);
+            sel.innerHTML = '<option value="">-</option>';
+            values.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.innerText = v;
+                sel.appendChild(opt);
+            });
+        }
+
+        function checkContractor() {
+            const val = document.getElementById('contractor').value;
+            const manual = document.getElementById('contractor_manual');
+            if (val === 'other') {
+                manual.style.display = 'block';
+            } else {
+                manual.style.display = 'none';
+            }
+        }
+
+        // Фото
+        document.getElementById('photo-input').addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('photo-preview');
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function nextStep() {
+            if (!document.getElementById('building').value) {
+                tg.showPopup({message: 'Выберите объект!'});
+                return;
+            }
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+        }
+
+        function prevStep() {
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step1').classList.remove('hidden');
+        }
+
+        function sendData() {
+            // Собираем оси
+            let axes = '';
+            const n1 = document.getElementById('axis_num_start').value;
+            const n2 = document.getElementById('axis_num_end').value;
+            const l1 = document.getElementById('axis_let_start').value;
+            const l2 = document.getElementById('axis_let_end').value;
+
+            if (n1) axes += n1;
+            if (n2 && n2 !== n1) axes += '-' + n2;
+            if (l1) axes += (axes ? ' / ' : '') + l1;
+            if (l2 && l2 !== l1) axes += '-' + l2;
+
+            // Подрядчик
+            const cVal = document.getElementById('contractor').value;
+            const contractorData = cVal === 'other' 
+                ? document.getElementById('contractor_manual').value 
+                : CONTRACTORS[cVal];
+
+            const data = {
+                action: "create_prescription",
+                building: document.getElementById('building').value,
+                floor: document.getElementById('floor').value,
+                axes: axes || "Не указаны",
+                structure: document.getElementById('structure').value,
+                issue: document.getElementById('issue').value || "Замечание не описано",
+                contractor_info: contractorData || "Подрядчик не выбран"
+            };
+
+            tg.sendData(JSON.stringify(data));
+        }
+    </script>
+</body>
+</html>
