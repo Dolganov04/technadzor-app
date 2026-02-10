@@ -77,8 +77,7 @@
         <div id="list" style="margin-top:20px"></div>
 
         <div style="position:fixed; bottom:0; left:0; width:100%; padding:10px; background:white; box-shadow:0 -2px 5px #ccc; display:flex; gap:10px; box-sizing:border-box;">
-            <button style="background:#ccc; width:30%" onclick="back()">НАЗАД</button>
-            <button id="sendBtn" style="width:70%" onclick="sendDirect()">СФОРМИРОВАТЬ</button>
+            <button style="background:#ccc; width:100%" onclick="back()">НАЗАД</button>
         </div>
     </div>
 
@@ -86,6 +85,11 @@
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
+
+        // Настраиваем Главную Кнопку (Telegram Native)
+        tg.MainButton.setText("СФОРМИРОВАТЬ ДОКУМЕНТ");
+        tg.MainButton.show();
+        tg.MainButton.onClick(sendDirect); // Вешаем обработчик
 
         // КОНФИГУРАЦИЯ (Вшитая)
         // Токен зашифрован простым base64, чтобы не светить в явном виде
@@ -205,55 +209,45 @@
         async function sendDirect() {
             if(items.length === 0) return alert("Список пуст");
             
-            const btn = document.getElementById('sendBtn');
-            btn.innerHTML = '<div class="loader"></div> Отправка...';
-            btn.disabled = true;
+            tg.MainButton.showProgress(); // Крутилка на нативной кнопке
+            tg.MainButton.disable();
 
             let cName = document.getElementById('contr').value;
             
-            // 1. Отправляем JSON (текст)
-            let data = {
-                action: "create_prescription_multi",
-                building: selBuild.value,
-                contractor_info: CONTRACTORS_FULL[cName] || cName,
-                items: items.map(i => ({...i, photo: undefined})) // Фото не шлем в JSON, чтобы не раздувать
-            };
-
-            const text = JSON.stringify(data);
-
-            try {
-                // Шлем текст
-                await fetch(`https://api.telegram.org/bot${_T}/sendMessage`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ chat_id: CHAT_ID, text: text })
-                });
-
-                // 2. Шлем фото отдельными сообщениями
-                for(let i=0; i<items.length; i++) {
-                    if(items[i].photo) {
+            // 1. Шлем фото отдельными сообщениями (чтобы бот их увидел и скачал для отчета)
+            for(let i=0; i<items.length; i++) {
+                if(items[i].photo) {
+                    try {
                         let blob = await (await fetch(items[i].photo)).blob();
                         let formData = new FormData();
                         formData.append('chat_id', CHAT_ID);
                         formData.append('photo', blob, 'photo.jpg');
-                        formData.append('caption', `Фото к нарушению №${i+1}: ${items[i].structure}, ${items[i].axes}`);
+                        // Важно: в caption пишем специальный маркер, чтобы бот понял, к чему это фото
+                        // Формат: [PHOTO_REF:item_index] Caption
+                        formData.append('caption', `[PHOTO_REF:${i}] Фото к нарушению №${i+1}: ${items[i].structure}, ${items[i].axes}`);
                         
                         await fetch(`https://api.telegram.org/bot${_T}/sendPhoto`, {
                             method: 'POST',
                             body: formData
                         });
+                    } catch(e) {
+                        console.error("Photo upload failed", e);
+                        alert("Не удалось отправить фото: " + e.message);
                     }
                 }
-
-                btn.style.background = "#34c759";
-                btn.innerHTML = "ГОТОВО!";
-                setTimeout(() => tg.close(), 1000);
-
-            } catch(e) {
-                alert("Ошибка API: " + e.message);
-                btn.disabled = false;
-                btn.innerHTML = "СФОРМИРОВАТЬ";
             }
+
+            // 2. Отправляем JSON через нативный sendData (придет как сервисное сообщение от юзера)
+            // Это скроет JSON от глаз (он будет выглядеть как "Data" или скрыт, в зависимости от клиента)
+            let data = {
+                action: "create_prescription_multi",
+                building: selBuild.value,
+                contractor_info: CONTRACTORS_FULL[cName] || cName,
+                items: items.map(i => ({...i, photo: undefined})) 
+            };
+
+            tg.sendData(JSON.stringify(data));
+            // sendData сама закрывает приложение
         }
     </script>
 </body>
