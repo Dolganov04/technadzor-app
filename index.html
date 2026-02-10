@@ -13,6 +13,7 @@
             --hint-color: #888888;
             --btn-color: #2481cc;
             --btn-text: #ffffff;
+            --danger-color: #ff3b30;
         }
 
         body {
@@ -21,25 +22,25 @@
             color: var(--tg-theme-text-color, var(--text-color));
             padding: 16px;
             margin: 0;
-            padding-bottom: 80px; 
+            padding-bottom: 100px;
         }
 
-        h2 { font-size: 20px; margin-bottom: 20px; margin-top: 0; }
+        h2 { font-size: 18px; margin: 0 0 15px 0; }
         
         label {
             display: block;
-            margin-top: 15px;
-            margin-bottom: 5px;
-            font-size: 14px;
+            margin-top: 12px;
+            margin-bottom: 4px;
+            font-size: 13px;
             font-weight: 500;
             color: var(--tg-theme-hint-color, var(--hint-color));
         }
 
         select, input, textarea {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             border: 1px solid #ddd;
-            border-radius: 10px;
+            border-radius: 8px;
             box-sizing: border-box;
             background-color: var(--tg-theme-secondary-bg-color, var(--secondary-bg));
             color: var(--tg-theme-text-color, var(--text-color));
@@ -47,19 +48,65 @@
             -webkit-appearance: none;
         }
 
-        .axis-group { display: flex; gap: 10px; }
+        .axis-group { display: flex; gap: 8px; }
         .axis-group select { width: 50%; }
         .hidden { display: none; }
 
-        .hint-box {
-            background-color: #e3f2fd;
-            color: #0d47a1;
+        .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+        
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background-color: var(--tg-theme-button-color, var(--btn-color));
+            color: var(--tg-theme-button-text-color, var(--btn-text));
+        }
+
+        .btn-secondary {
+            background-color: #efeff4;
+            color: #000;
+        }
+
+        .btn-add {
+            background-color: #34c759; /* Green */
+            color: white;
+            margin-top: 15px;
+            width: 100%;
+        }
+
+        /* Список замечаний */
+        #issues-list { margin-top: 20px; }
+        
+        .issue-card {
+            background: var(--tg-theme-secondary-bg-color, #f9f9f9);
             padding: 12px;
             border-radius: 8px;
-            margin-top: 20px;
-            font-size: 14px;
-            border: 1px solid #b3e5fc;
-            line-height: 1.4;
+            margin-bottom: 10px;
+            position: relative;
+            border-left: 4px solid var(--btn-color);
+        }
+
+        .issue-title { font-weight: bold; font-size: 14px; }
+        .issue-desc { font-size: 13px; color: var(--tg-theme-hint-color, #666); margin-top: 4px; }
+        
+        .btn-delete {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: var(--danger-color);
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
         }
 
         .bottom-bar {
@@ -67,36 +114,21 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            padding: 10px 16px 20px;
+            padding: 12px 16px 24px;
             background-color: var(--tg-theme-bg-color, var(--bg-color));
             box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
             box-sizing: border-box;
-            display: flex;
-            gap: 10px;
+            z-index: 100;
         }
-
-        .main-btn {
-            flex: 1;
-            padding: 14px;
-            background-color: var(--tg-theme-button-color, var(--btn-color));
-            color: var(--tg-theme-button-text-color, var(--btn-text));
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-        }
-        
-        .back-btn { background-color: #efeff4; color: #000; width: 100px; }
     </style>
 </head>
 <body>
 
+    <!-- ШАГ 1: Общие данные -->
     <div id="step1">
-        <h2>🏗 Шаг 1: Место</h2>
+        <h2>📄 Шаг 1: Общие данные</h2>
         
-        <label>Сооружение</label>
+        <label>Объект (Сооружение)</label>
         <select id="building" onchange="updateAxes()">
             <option value="" disabled selected>Выберите объект</option>
             <option value="Блок-секция 1">Блок-секция 1</option>
@@ -110,49 +142,6 @@
             <option value="Тёплая стоянка">Тёплая стоянка</option>
         </select>
 
-        <label>Этаж</label>
-        <select id="floor">
-            <option value="1">1 этаж</option>
-            <option value="2">2 этаж</option>
-            <option value="3">3 этаж</option>
-            <option value="4">4 этаж</option>
-            <option value="Кровля">Кровля</option>
-            <option value="Подвал">Подвал</option>
-        </select>
-
-        <label>Оси (Цифры)</label>
-        <div class="axis-group">
-            <select id="axis_num_start"><option>-</option></select>
-            <select id="axis_num_end"><option>-</option></select>
-        </div>
-
-        <label>Оси (Буквы)</label>
-        <div class="axis-group">
-            <select id="axis_let_start"><option>-</option></select>
-            <select id="axis_let_end"><option>-</option></select>
-        </div>
-
-        <label>Конструкция</label>
-        <select id="structure">
-            <option value="Стена">Стена</option>
-            <option value="Колонна">Колонна</option>
-            <option value="Балка перекрытия">Балка перекрытия</option>
-            <option value="Плита перекрытия">Плита перекрытия</option>
-            <option value="Парапет">Парапет</option>
-            <option value="Оконный проем">Оконный проем</option>
-            <option value="Стык колонны и балки">Стык колонны и балки</option>
-            <option value="Стык плиты и стены">Стык плиты и стены</option>
-            <option value="Оконная перемычка">Оконная перемычка</option>
-        </select>
-
-        <div class="bottom-bar">
-            <button class="main-btn" onclick="nextStep()">Далее →</button>
-        </div>
-    </div>
-
-    <div id="step2" class="hidden">
-        <h2>📝 Шаг 2: Нарушение</h2>
-
         <label>Подрядчик</label>
         <select id="contractor" onchange="checkContractor()">
             <option value="ПРОНТО">ООО «ПРОНТО»</option>
@@ -160,20 +149,64 @@
             <option value="Строй Трейд">ООО «Строй Трейд»</option>
             <option value="other">➕ Ввести вручную...</option>
         </select>
-        
-        <input type="text" id="contractor_manual" class="hidden" placeholder="Название и реквизиты" style="margin-top:5px;">
-
-        <label>Суть нарушения</label>
-        <textarea id="issue" rows="4" placeholder="Например: Отклонение от вертикали 15мм..."></textarea>
-
-        <div class="hint-box">
-            👉 Нажмите "Сформировать".<br>
-            📸 <b>Фото</b> отправьте в чат скрепкой сразу после этого сообщения. Бот сам прикрепит его к документу.
-        </div>
+        <input type="text" id="contractor_manual" class="hidden" placeholder="Реквизиты подрядчика" style="margin-top:5px;">
 
         <div class="bottom-bar">
-            <button class="main-btn back-btn" onclick="prevStep()">← Назад</button>
-            <button class="main-btn" onclick="sendData()">Сформировать ✅</button>
+            <button class="btn btn-primary" onclick="goToStep2()" style="width:100%">Далее: Добавить замечания →</button>
+        </div>
+    </div>
+
+    <!-- ШАГ 2: Добавление замечаний -->
+    <div id="step2" class="hidden">
+        <h2>🛠 Новое замечание</h2>
+
+        <div style="background: var(--tg-theme-secondary-bg-color); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+            <label style="margin-top:0">Этаж</label>
+            <select id="floor">
+                <option value="1">1 этаж</option>
+                <option value="2">2 этаж</option>
+                <option value="3">3 этаж</option>
+                <option value="4">4 этаж</option>
+                <option value="Кровля">Кровля</option>
+                <option value="Подвал">Подвал</option>
+            </select>
+
+            <label>Оси (Цифры / Буквы)</label>
+            <div class="axis-group">
+                <select id="axis_num_start"><option>-</option></select>
+                <select id="axis_num_end"><option>-</option></select>
+            </div>
+            <div class="axis-group" style="margin-top:5px">
+                <select id="axis_let_start"><option>-</option></select>
+                <select id="axis_let_end"><option>-</option></select>
+            </div>
+
+            <label>Конструкция</label>
+            <select id="structure">
+                <option value="Стена">Стена</option>
+                <option value="Колонна">Колонна</option>
+                <option value="Плита перекрытия">Плита перекрытия</option>
+                <option value="Балка">Балка</option>
+                <option value="Оконный проем">Оконный проем</option>
+                <option value="Парапет">Парапет</option>
+                <option value="Лестничный марш">Лестничный марш</option>
+            </select>
+
+            <label>Нарушение</label>
+            <textarea id="issue" rows="2" placeholder="Кратко опишите дефект"></textarea>
+
+            <button class="btn btn-add" onclick="addIssue()">➕ Добавить в список</button>
+        </div>
+
+        <h3>Список замечаний (<span id="count">0</span>)</h3>
+        <div id="issues-list">
+            <!-- Сюда добавляются карточки -->
+            <div style="color: #999; font-style: italic; text-align: center; padding: 10px;">Список пуст</div>
+        </div>
+
+        <div class="bottom-bar" style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary" onclick="backToStep1()" style="width: 30%">← Назад</button>
+            <button class="btn btn-primary" onclick="sendAll()" style="width: 70%">Сформировать</button>
         </div>
     </div>
 
@@ -182,7 +215,9 @@
         tg.ready();
         tg.expand();
 
-        // База данных осей (полная)
+        let ISSUES = [];
+
+        // База осей (сокращена, будет полная)
         const AXES_DB = {
             "Блок-секция 1": { num: ["2", "3", "4", "5"], let: ["С", "У", "Ф", "Ф/1", "Ш", "Ш/1", "Э", "Э/1", "Ю", "Я", "ББ"] },
             "Блок-секция 2": { num: ["1", "2", "3", "4", "5"], let: ["Е", "И", "И/1", "К", "Л", "М", "М/2", "Н", "П", "Р"] },
@@ -226,21 +261,21 @@
             document.getElementById('contractor_manual').style.display = (val === 'other') ? 'block' : 'none';
         }
 
-        function nextStep() {
+        function goToStep2() {
             if (!document.getElementById('building').value) {
-                tg.showPopup({message: 'Сначала выберите объект!'});
+                tg.showPopup({message: 'Выберите объект!'});
                 return;
             }
             document.getElementById('step1').classList.add('hidden');
             document.getElementById('step2').classList.remove('hidden');
         }
 
-        function prevStep() {
+        function backToStep1() {
             document.getElementById('step2').classList.add('hidden');
             document.getElementById('step1').classList.remove('hidden');
         }
 
-        function sendData() {
+        function getAxesString() {
             let axes = '';
             const n1 = document.getElementById('axis_num_start').value;
             const n2 = document.getElementById('axis_num_end').value;
@@ -251,26 +286,85 @@
             if (n2 && n2 !== n1) axes += '-' + n2;
             if (l1) axes += (axes ? ' / ' : '') + l1;
             if (l2 && l2 !== l1) axes += '-' + l2;
+            return axes || "Не указаны";
+        }
+
+        function addIssue() {
+            const floor = document.getElementById('floor').value;
+            const axes = getAxesString();
+            const structure = document.getElementById('structure').value;
+            const issueText = document.getElementById('issue').value.trim();
+
+            if (!issueText) {
+                tg.showPopup({message: 'Опишите нарушение!'});
+                return;
+            }
+
+            const item = {
+                id: Date.now(),
+                floor: floor,
+                axes: axes,
+                structure: structure,
+                issue: issueText
+            };
+
+            ISSUES.push(item);
+            renderList();
+            
+            // Очистка полей
+            document.getElementById('issue').value = '';
+            // Оси не очищаем (часто идут подряд на одном этаже)
+        }
+
+        function removeIssue(id) {
+            ISSUES = ISSUES.filter(i => i.id !== id);
+            renderList();
+        }
+
+        function renderList() {
+            const list = document.getElementById('issues-list');
+            const count = document.getElementById('count');
+            
+            count.innerText = ISSUES.length;
+            list.innerHTML = '';
+
+            if (ISSUES.length === 0) {
+                list.innerHTML = '<div style="color: #999; font-style: italic; text-align: center; padding: 10px;">Список пуст</div>';
+                return;
+            }
+
+            ISSUES.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'issue-card';
+                card.innerHTML = `
+                    <div class="issue-title">#${index + 1}. ${item.structure} (${item.floor} эт, ${item.axes})</div>
+                    <div class="issue-desc">${item.issue}</div>
+                    <button class="btn-delete" onclick="removeIssue(${item.id})">×</button>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function sendAll() {
+            if (ISSUES.length === 0) {
+                tg.showPopup({message: 'Список пуст! Добавьте хотя бы одно замечание.'});
+                return;
+            }
 
             const cVal = document.getElementById('contractor').value;
             const contractorData = cVal === 'other' ? document.getElementById('contractor_manual').value : CONTRACTORS[cVal];
 
             const data = {
-                action: "create_prescription",
+                action: "create_prescription_multi",
                 building: document.getElementById('building').value,
-                floor: document.getElementById('floor').value,
-                axes: axes || "Не указаны",
-                structure: document.getElementById('structure').value,
-                issue: document.getElementById('issue').value || "Замечание не описано",
-                contractor_info: contractorData || "Подрядчик не выбран"
+                contractor_info: contractorData || "Подрядчик не выбран",
+                items: ISSUES
             };
 
-            // Отправка
             try {
                 tg.sendData(JSON.stringify(data));
             } catch (e) {
-                // Если ошибка (например, открыто в браузере), покажем alert
-                alert("Ошибка отправки (откройте в Telegram): " + e.message);
+                alert("Ошибка: " + e.message);
             }
         }
     </script>
