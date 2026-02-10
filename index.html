@@ -21,7 +21,7 @@
             color: var(--tg-theme-text-color, var(--text-color));
             padding: 16px;
             margin: 0;
-            padding-bottom: 80px; /* место под кнопку */
+            padding-bottom: 80px; 
         }
 
         h2 { font-size: 20px; margin-bottom: 20px; margin-top: 0; }
@@ -44,28 +44,30 @@
             background-color: var(--tg-theme-secondary-bg-color, var(--secondary-bg));
             color: var(--tg-theme-text-color, var(--text-color));
             font-size: 16px;
-            -webkit-appearance: none; /* убирает стандартные стили iOS */
+            -webkit-appearance: none;
         }
 
-        .axis-group {
-            display: flex;
-            gap: 10px;
-        }
+        .axis-group { display: flex; gap: 10px; }
         .axis-group select { width: 50%; }
-
         .hidden { display: none; }
 
-        .hint-box {
-            background-color: #fff3cd;
-            color: #664d03;
-            padding: 10px;
-            border-radius: 8px;
-            margin-top: 15px;
-            font-size: 14px;
-            border: 1px solid #ffecb5;
+        .photo-btn {
+            margin-top: 20px;
+            background-color: #ff9f0a;
+            color: white;
+            text-align: center;
+            padding: 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            display: block;
         }
 
-        /* Плавающая кнопка внизу (как в нативных приложениях) */
+        .photo-btn.uploading {
+            background-color: #ccc;
+            cursor: wait;
+        }
+
         .bottom-bar {
             position: fixed;
             bottom: 0;
@@ -92,10 +94,15 @@
             text-align: center;
         }
         
-        .back-btn {
-            background-color: #efeff4;
-            color: #000;
-            width: 100px;
+        .back-btn { background-color: #efeff4; color: #000; width: 100px; }
+
+        #photo-preview {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-top: 10px;
+            display: none;
         }
     </style>
 </head>
@@ -174,10 +181,11 @@
         <label>Суть нарушения</label>
         <textarea id="issue" rows="4" placeholder="Например: Отклонение от вертикали 15мм..."></textarea>
 
-        <div class="hint-box">
-            📸 <b>Фотофиксация:</b><br>
-            Сделайте фото камерой телефона сейчас. После нажатия "Сформировать" отправьте фото в чат с ботом.
-        </div>
+        <!-- Кнопка фото с авто-загрузкой -->
+        <label for="photo-input" class="photo-btn" id="photo-label">📷 Добавить фото</label>
+        <input type="file" id="photo-input" accept="image/*" capture="environment" style="display: none;">
+        <img id="photo-preview" src="">
+        <input type="hidden" id="photo-url">
 
         <div class="bottom-bar">
             <button class="main-btn back-btn" onclick="prevStep()">← Назад</button>
@@ -187,52 +195,22 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.ready(); // Сообщаем, что приложение готово
-        tg.expand(); // На весь экран
+        tg.ready();
+        tg.expand();
 
-        // Если не в телеграме (для отладки в браузере)
-        if (!tg.initDataUnsafe || !tg.initDataUnsafe.query_id) {
-            console.log("Not in Telegram mode");
-        }
+        const UPLOAD_SERVER = "https://workplace-favor-initially-pcs.trycloudflare.com"; 
 
-        // База данных осей
+        // База данных осей (сокращена для примера, полная версия будет в файле)
         const AXES_DB = {
-            "Блок-секция 1": {
-                num: ["2", "3", "4", "5"],
-                let: ["С", "У", "Ф", "Ф/1", "Ш", "Ш/1", "Э", "Э/1", "Ю", "Я", "ББ"]
-            },
-            "Блок-секция 2": {
-                num: ["1", "2", "3", "4", "5"],
-                let: ["Е", "И", "И/1", "К", "Л", "М", "М/2", "Н", "П", "Р"]
-            },
-            "Блок-секция 3": {
-                num: ["6", "7", "8", "9", "9/1", "10", "10/1", "11", "11/1", "12", "13", "14", "14/1", "15"],
-                let: ["К", "Л", "М", "Н", "П", "П/1", "Р", "С", "Т", "У"]
-            },
-            "Блок-секция 4": {
-                num: ["6", "7", "8", "9", "9/1", "10", "10/1", "11", "11/1", "12", "13", "14", "14/1", "15"],
-                let: ["Е", "Е/1", "Ж", "И", "К/1"]
-            },
-            "Блок-секция 5": {
-                num: ["11", "11/1", "12", "13", "14", "14/1", "15", "16", "16/1", "17", "18", "19"],
-                let: ["У", "У/1", "Ф", "Ш", "Э", "Ю", "Я", "АА", "ВВ", "ГГ", "ДД", "А/1"]
-            },
-            "Блок-секция 6": {
-                num: ["16", "17", "18", "19", "20", "21", "22"],
-                let: ["И", "К/1", "К", "Л", "М", "Н", "П", "П/1", "Р", "С", "Т"]
-            },
-            "Блок-секция 7": {
-                num: ["16", "16/1", "17", "18", "19", "20", "21", "22"],
-                let: ["А", "Б", "В", "В/1", "Г", "Д", "Д/1", "Е", "Е/1", "Ж"]
-            },
-            "Интернат": {
-                num: ["1", "2", "3", "4"],
-                let: ["А", "Б", "В", "Г", "Д", "Е", "Ж", "И", "К", "Л", "М", "Н", "П", "Р", "С", "Т", "У"]
-            },
-            "Тёплая стоянка": {
-                num: ["1", "2"],
-                let: ["А", "Б", "В"]
-            }
+            "Блок-секция 1": { num: ["2", "3", "4", "5"], let: ["С", "У", "Ф", "Ф/1", "Ш", "Ш/1", "Э", "Э/1", "Ю", "Я", "ББ"] },
+            "Блок-секция 2": { num: ["1", "2", "3", "4", "5"], let: ["Е", "И", "И/1", "К", "Л", "М", "М/2", "Н", "П", "Р"] },
+            "Блок-секция 3": { num: ["6", "7", "8", "9", "9/1", "10", "10/1", "11", "11/1", "12", "13", "14", "14/1", "15"], let: ["К", "Л", "М", "Н", "П", "П/1", "Р", "С", "Т", "У"] },
+            "Блок-секция 4": { num: ["6", "7", "8", "9", "9/1", "10", "10/1", "11", "11/1", "12", "13", "14", "14/1", "15"], let: ["Е", "Е/1", "Ж", "И", "К/1"] },
+            "Блок-секция 5": { num: ["11", "11/1", "12", "13", "14", "14/1", "15", "16", "16/1", "17", "18", "19"], let: ["У", "У/1", "Ф", "Ш", "Э", "Ю", "Я", "АА", "ВВ", "ГГ", "ДД", "А/1"] },
+            "Блок-секция 6": { num: ["16", "17", "18", "19", "20", "21", "22"], let: ["И", "К/1", "К", "Л", "М", "Н", "П", "П/1", "Р", "С", "Т"] },
+            "Блок-секция 7": { num: ["16", "16/1", "17", "18", "19", "20", "21", "22"], let: ["А", "Б", "В", "В/1", "Г", "Д", "Д/1", "Е", "Е/1", "Ж"] },
+            "Интернат": { num: ["1", "2", "3", "4"], let: ["А", "Б", "В", "Г", "Д", "Е", "Ж", "И", "К", "Л", "М", "Н", "П", "Р", "С", "Т", "У"] },
+            "Тёплая стоянка": { num: ["1", "2"], let: ["А", "Б", "В"] }
         };
 
         const CONTRACTORS = {
@@ -244,7 +222,6 @@
         function updateAxes() {
             const buildName = document.getElementById('building').value;
             const data = AXES_DB[buildName];
-            
             fillSelect('axis_num_start', data?.num || []);
             fillSelect('axis_num_end', data?.num || []);
             fillSelect('axis_let_start', data?.let || []);
@@ -264,8 +241,7 @@
 
         function checkContractor() {
             const val = document.getElementById('contractor').value;
-            const manual = document.getElementById('contractor_manual');
-            manual.style.display = (val === 'other') ? 'block' : 'none';
+            document.getElementById('contractor_manual').style.display = (val === 'other') ? 'block' : 'none';
         }
 
         function nextStep() {
@@ -282,6 +258,52 @@
             document.getElementById('step1').classList.remove('hidden');
         }
 
+        // Загрузка фото на сервер
+        document.getElementById('photo-input').addEventListener('change', async function() {
+            const file = this.files[0];
+            if (!file) return;
+
+            const btn = document.getElementById('photo-label');
+            const preview = document.getElementById('photo-preview');
+            
+            // Предпросмотр
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+
+            // Загрузка
+            btn.textContent = '⏳ Загрузка...';
+            btn.classList.add('uploading');
+
+            const formData = new FormData();
+            formData.append('photo', file);
+
+            try {
+                const res = await fetch(UPLOAD_SERVER + '/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const json = await res.json();
+                
+                if (json.success) {
+                    document.getElementById('photo-url').value = UPLOAD_SERVER + json.url;
+                    btn.textContent = '✅ Фото загружено';
+                    btn.style.backgroundColor = '#34c759';
+                } else {
+                    throw new Error(json.error);
+                }
+            } catch (e) {
+                tg.showPopup({message: 'Ошибка загрузки фото: ' + e.message});
+                btn.textContent = '❌ Ошибка (попробуйте еще раз)';
+                btn.style.backgroundColor = '#ff3b30';
+            } finally {
+                btn.classList.remove('uploading');
+            }
+        });
+
         function sendData() {
             // Собираем оси
             let axes = '';
@@ -295,11 +317,8 @@
             if (l1) axes += (axes ? ' / ' : '') + l1;
             if (l2 && l2 !== l1) axes += '-' + l2;
 
-            // Подрядчик
             const cVal = document.getElementById('contractor').value;
-            const contractorData = cVal === 'other' 
-                ? document.getElementById('contractor_manual').value 
-                : CONTRACTORS[cVal];
+            const contractorData = cVal === 'other' ? document.getElementById('contractor_manual').value : CONTRACTORS[cVal];
 
             const data = {
                 action: "create_prescription",
@@ -308,12 +327,12 @@
                 axes: axes || "Не указаны",
                 structure: document.getElementById('structure').value,
                 issue: document.getElementById('issue').value || "Замечание не описано",
-                contractor_info: contractorData || "Подрядчик не выбран"
+                contractor_info: contractorData || "Подрядчик не выбран",
+                photo_url: document.getElementById('photo-url').value || ""
             };
 
             try {
                 tg.sendData(JSON.stringify(data));
-                // На всякий случай закрываем, если sendData не закрыл (бывает на Android)
                 setTimeout(() => tg.close(), 1000); 
             } catch (e) {
                 tg.showPopup({message: 'Ошибка отправки: ' + e.message});
