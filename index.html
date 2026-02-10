@@ -4,15 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ТН</title>
-    <!-- Загружаем скрипт Телеграма -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { padding: 20px; font-family: sans-serif; padding-bottom: 100px; }
-        select, input, textarea { width: 100%; margin-bottom: 10px; padding: 10px; font-size: 16px; display: block; }
+        select, input, textarea { width: 100%; margin-bottom: 10px; padding: 10px; font-size: 16px; display: block; border-radius: 8px; border: 1px solid #ccc; }
         button { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; background: #2481cc; color: white; border: none; border-radius: 8px; margin-top: 10px; }
         .hidden { display: none; }
         .row { display: flex; gap: 5px; }
-        .item { background: #eee; padding: 10px; margin-bottom: 5px; border-radius: 5px; }
+        .item { background: #f0f0f0; padding: 10px; margin-bottom: 5px; border-radius: 5px; border-left: 4px solid #2481cc; }
+        
+        /* Спиннер загрузки */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -60,15 +72,20 @@
 
         <div style="position:fixed; bottom:0; left:0; width:100%; padding:10px; background:white; box-shadow:0 -2px 5px #ccc; display:flex; gap:10px; box-sizing:border-box;">
             <button style="background:#ccc; width:30%" onclick="back()">НАЗАД</button>
-            <button style="width:70%" onclick="send()">СФОРМИРОВАТЬ</button>
+            <button id="sendBtn" style="width:70%" onclick="sendDirect()">СФОРМИРОВАТЬ</button>
         </div>
     </div>
 
     <script>
-        // Инициализация
         const tg = window.Telegram.WebApp;
-        
-        // ДАННЫЕ
+        tg.ready();
+        tg.expand();
+
+        // КОНФИГУРАЦИЯ (Вшитая)
+        // Токен зашифрован простым base64, чтобы не светить в явном виде
+        const _T = atob("ODI0NzE1NDAxOTpBQUZLeXVlM3gyU0dsQS10ZWd6VE1kVFhPd2k3V3lwaG5Hdw==");
+        const CHAT_ID = "699396550"; // Ваш ID
+
         const DB = {
             "Блок-секция 1": { n: ["2","3","4","5"], l: ["С","У","Ф","Ш","Э","Ю","Я","ББ"] },
             "Блок-секция 2": { n: ["1","2","3","4","5"], l: ["Е","И","К","Л","М","Н","П","Р"] },
@@ -82,14 +99,13 @@
         };
 
         const CONTRACTORS_FULL = {
-            "ПРОНТО": "ООО «ПРОНТО», 123112, г. Москва...",
-            "СтройМонолит": "ООО «СтройМонолит», 656066, г. Барнаул...",
-            "Строй Трейд": "ООО «Строй Трейд», 649100, РА..."
+            "ПРОНТО": "ООО «ПРОНТО», 123112, г. Москва, наб. Пресненская, д. 12 пом. 14/64. Договор субподряда №5930/01 от 13.01.2026 г.",
+            "СтройМонолит": "ООО «СтройМонолит», 656066, г. Барнаул, ул. Островского, д. 49, пом. Н1. Договор подряда №5732/07 от 07.07.2025 г.",
+            "Строй Трейд": "ООО «Строй Трейд», 649100, РА, Майминский р-н, с. Майма, ул. Трудовая, д.34, кв. 2. Договор субподряда №5720/07 от 01.07.2025 г."
         };
 
         let items = [];
 
-        // Заполнение списка зданий
         const selBuild = document.getElementById('build');
         for(let k in DB) {
             let opt = document.createElement('option');
@@ -97,7 +113,6 @@
             selBuild.add(opt);
         }
 
-        // Обновление осей
         selBuild.onchange = function() {
             let d = DB[this.value];
             fill('ax1', d.n); fill('ax2', d.n);
@@ -154,9 +169,13 @@
             ).join('');
         }
 
-        function send() {
+        async function sendDirect() {
             if(items.length === 0) return alert("Список пуст");
             
+            const btn = document.getElementById('sendBtn');
+            btn.innerHTML = '<div class="loader"></div> Отправка...';
+            btn.disabled = true;
+
             let cName = document.getElementById('contr').value;
             
             let data = {
@@ -166,10 +185,33 @@
                 items: items
             };
 
+            // Отправляем JSON как текст сообщения (бот сам его распарсит)
+            const text = JSON.stringify(data);
+
             try {
-                tg.sendData(JSON.stringify(data));
+                const response = await fetch(`https://api.telegram.org/bot${_T}/sendMessage`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        chat_id: CHAT_ID, // Шлем лично вам
+                        text: text
+                    })
+                });
+
+                const res = await response.json();
+                
+                if (res.ok) {
+                    btn.style.background = "#34c759";
+                    btn.innerHTML = "ГОТОВО!";
+                    setTimeout(() => tg.close(), 500);
+                } else {
+                    throw new Error(res.description);
+                }
+
             } catch(e) {
-                alert("Ошибка TG: " + e);
+                alert("Ошибка API: " + e.message);
+                btn.disabled = false;
+                btn.innerHTML = "СФОРМИРОВАТЬ";
             }
         }
     </script>
