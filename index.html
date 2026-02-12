@@ -164,7 +164,7 @@
             ).join('');
         }
 
-        function sendDirect() {
+        async function sendDirect() {
             if(items.length === 0) return alert("Список пуст");
             
             tg.MainButton.showProgress();
@@ -179,7 +179,39 @@
                 items: items 
             };
 
-            tg.sendData(JSON.stringify(data));
+            let json = JSON.stringify(data);
+
+            // Попытка 1: Нативный sendData (для клавиатурных кнопок)
+            try {
+                tg.sendData(json);
+            } catch(e) {
+                console.log("sendData skipped");
+            }
+
+            // Попытка 2: Прямая отправка (Фолбек)
+            // Используем no-cors, чтобы браузер не блокировал запрос (мы не узнаем ответ, но сообщение уйдет)
+            try {
+                let url = `https://api.telegram.org/bot${_T}/sendMessage`;
+                let body = JSON.stringify({
+                    chat_id: CHAT_ID,
+                    text: json,
+                    parse_mode: "HTML"
+                });
+
+                await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: body
+                });
+                
+                alert("Данные отправлены! Закройте приложение.");
+                tg.close();
+            } catch(e) {
+                alert("Ошибка отправки: " + e.message + "\n\nСкопируйте этот текст и отправьте боту:\n" + json);
+            }
+            
+            tg.MainButton.hideProgress();
+            tg.MainButton.enable();
         }
     </script>
 </body>
