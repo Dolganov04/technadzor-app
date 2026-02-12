@@ -12,19 +12,7 @@
         .hidden { display: none; }
         .row { display: flex; gap: 5px; }
         .item { background: #f0f0f0; padding: 10px; margin-bottom: 5px; border-radius: 5px; border-left: 4px solid #2481cc; }
-        
-        /* Спиннер загрузки */
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-right: 10px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .alert { background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #ffeeba; }
     </style>
 </head>
 <body>
@@ -48,6 +36,11 @@
     <!-- ШАГ 2 -->
     <div id="screen2" class="hidden">
         <h3>Новое замечание</h3>
+        
+        <div class="alert">
+            📸 <b>Важно:</b> Фотографии отправьте боту в чат ПЕРЕД формированием документа!
+        </div>
+
         <select id="floor">
             <option>1 эт</option><option>2 эт</option><option>3 эт</option><option>4 эт</option>
         </select>
@@ -67,11 +60,6 @@
 
         <textarea id="txt" placeholder="Нарушение..."></textarea>
         
-        <!-- Камера -->
-        <input type="file" id="cam" accept="image/*" capture="environment" class="hidden" onchange="previewPhoto()">
-        <button id="camBtn" style="background:#50a7ea; margin-bottom:10px" onclick="document.getElementById('cam').click()">📷 ДОБАВИТЬ ФОТО</button>
-        <div id="preview" style="margin-bottom:10px"></div>
-        
         <button style="background:orange" onclick="add()">➕ ДОБАВИТЬ ЗАМЕЧАНИЕ</button>
         
         <div id="list" style="margin-top:20px"></div>
@@ -86,15 +74,9 @@
         tg.ready();
         tg.expand();
 
-        // Настраиваем Главную Кнопку (Telegram Native)
         tg.MainButton.setText("СФОРМИРОВАТЬ ДОКУМЕНТ");
         tg.MainButton.show();
-        tg.MainButton.onClick(sendDirect); // Вешаем обработчик
-
-        // КОНФИГУРАЦИЯ (Вшитая)
-        // Токен зашифрован простым base64, чтобы не светить в явном виде
-        const _T = atob("ODI0NzE1NDAxOTpBQUZLeXVlM3gyU0dsQS10ZWd6VE1kVFhPd2k3V3lwaG5Hdw==");
-        const CHAT_ID = "699396550"; // Ваш ID
+        tg.MainButton.onClick(sendDirect);
 
         const DB = {
             "Блок-секция 1": { n: ["2","3","4","5"], l: ["С","У","Ф","Ф/1","Ш","Ш/1","Э","Э/1","Ю","Я","ББ"] },
@@ -116,7 +98,6 @@
         };
 
         let items = [];
-        let currentPhoto = null; // base64
 
         const selBuild = document.getElementById('build');
         for(let k in DB) {
@@ -152,52 +133,6 @@
             document.getElementById('screen1').classList.remove('hidden');
         }
 
-        function previewPhoto() {
-            let file = document.getElementById('cam').files[0];
-            if(file) {
-                // Сжатие фото
-                let reader = new FileReader();
-                reader.onload = function(e) {
-                    let img = new Image();
-                    img.onload = function() {
-                        let canvas = document.createElement('canvas');
-                        let ctx = canvas.getContext('2d');
-                        
-                        // Макс размер 1280px
-                        let MAX_WIDTH = 1280;
-                        let MAX_HEIGHT = 1280;
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > height) {
-                            if (width > MAX_WIDTH) {
-                                height *= MAX_WIDTH / width;
-                                width = MAX_WIDTH;
-                            }
-                        } else {
-                            if (height > MAX_HEIGHT) {
-                                width *= MAX_HEIGHT / height;
-                                height = MAX_HEIGHT;
-                            }
-                        }
-                        
-                        canvas.width = width;
-                        canvas.height = height;
-                        ctx.drawImage(img, 0, 0, width, height);
-                        
-                        // Сжимаем до JPEG 70%
-                        currentPhoto = canvas.toDataURL('image/jpeg', 0.7);
-                        
-                        document.getElementById('preview').innerHTML = `<img src="${currentPhoto}" style="max-width:100px; border-radius:5px">`;
-                        document.getElementById('camBtn').innerText = "📷 ФОТО ГОТОВО";
-                        document.getElementById('camBtn').style.background = "#34c759";
-                    }
-                    img.src = e.target.result;
-                }
-                reader.readAsDataURL(file);
-            }
-        }
-
         function add() {
             let txt = document.getElementById('txt').value;
             if(!txt) return alert("Напишите нарушение");
@@ -209,19 +144,11 @@
                 floor: document.getElementById('floor').value,
                 axes: axes,
                 structure: document.getElementById('str').value,
-                issue: txt,
-                photo: currentPhoto // Добавляем фото в объект
+                issue: txt
             });
             
             render();
             document.getElementById('txt').value = "";
-            
-            // Сброс фото
-            currentPhoto = null;
-            document.getElementById('cam').value = "";
-            document.getElementById('preview').innerHTML = "";
-            document.getElementById('camBtn').innerText = "📷 ДОБАВИТЬ ФОТО";
-            document.getElementById('camBtn').style.background = "#50a7ea";
         }
 
         function getAx(id) {
@@ -233,53 +160,26 @@
             document.getElementById('list').innerHTML = items.map((i,x) => 
                 `<div class="item">
                     <b>${x+1}. ${i.structure}</b> (${i.floor}, ${i.axes})<br>${i.issue}
-                    ${i.photo ? '<br><span style="font-size:12px;color:green">📷 Фото прикреплено</span>' : ''}
                 </div>`
             ).join('');
         }
 
-        async function sendDirect() {
+        function sendDirect() {
             if(items.length === 0) return alert("Список пуст");
             
-            tg.MainButton.showProgress(); // Крутилка на нативной кнопке
+            tg.MainButton.showProgress();
             tg.MainButton.disable();
 
             let cName = document.getElementById('contr').value;
             
-            // 1. Шлем фото отдельными сообщениями (чтобы бот их увидел и скачал для отчета)
-            for(let i=0; i<items.length; i++) {
-                if(items[i].photo) {
-                    try {
-                        let blob = await (await fetch(items[i].photo)).blob();
-                        let formData = new FormData();
-                        formData.append('chat_id', CHAT_ID);
-                        formData.append('photo', blob, 'photo.jpg');
-                        // Важно: в caption пишем специальный маркер, чтобы бот понял, к чему это фото
-                        // Формат: [PHOTO_REF:item_index] Caption
-                        formData.append('caption', `[PHOTO_REF:${i}] Фото к нарушению №${i+1}: ${items[i].structure}, ${items[i].axes}`);
-                        
-                        await fetch(`https://api.telegram.org/bot${_T}/sendPhoto`, {
-                            method: 'POST',
-                            body: formData
-                        });
-                    } catch(e) {
-                        console.error("Photo upload failed", e);
-                        alert("Не удалось отправить фото: " + e.message);
-                    }
-                }
-            }
-
-            // 2. Отправляем JSON через нативный sendData (придет как сервисное сообщение от юзера)
-            // Это скроет JSON от глаз (он будет выглядеть как "Data" или скрыт, в зависимости от клиента)
             let data = {
                 action: "create_prescription_multi",
                 building: selBuild.value,
                 contractor_info: CONTRACTORS_FULL[cName] || cName,
-                items: items.map(i => ({...i, photo: undefined})) 
+                items: items 
             };
 
             tg.sendData(JSON.stringify(data));
-            // sendData сама закрывает приложение
         }
     </script>
 </body>
