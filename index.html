@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ТН</title>
+
+  <!-- Telegram Mini App SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
   <style>
     body { padding: 20px; font-family: sans-serif; padding-bottom: 120px; }
     select, input, textarea {
@@ -43,6 +46,7 @@
     }
     .footerbar button { margin-top: 0; }
     .small { font-size: 12px; opacity: .8; }
+    code { background: rgba(0,0,0,.06); padding: 2px 6px; border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -70,8 +74,9 @@
     <h3>Новое замечание</h3>
 
     <div class="alert">
-      📸 <b>Фото отправляются в чат бота</b> через кнопку у замечания.<br>
-      В Mini App фото не загружаются.
+      📸 <b>Фото делаются/выбираются прямо тут</b> (камера/галерея),<br>
+      затем <b>отправляются в бота через ваш сервер</b>.<br>
+      В документ фото <b>не вставляются</b>.
     </div>
 
     <select id="floor">
@@ -103,17 +108,33 @@
   </div>
 
 <script>
-  // === ВСТАВЛЕНО: username твоего бота (без @) ===
-  const BOT_USERNAME = "AnatolyDolganovbot";
+  /********************************************************************
+   * НАСТРОЙКИ (ВАЖНО)
+   ********************************************************************/
 
+  // 1) URL вашего BACKEND (HTTPS!), который принимает фото и сам отправляет в бот.
+  //    Backend должен:
+  //    - проверить tg.initData (подпись)
+  //    - отправить фото в Telegram Bot API
+  //    - сохранить привязку: session_id + item_id -> message_id/photo
+  //
+  // Endpoint принимает multipart/form-data:
+  //   initData, session_id, item_id, photo
+  //
+  const UPLOAD_URL = "https://YOUR-DOMAIN.COM/upload_photo";
+
+  /********************************************************************
+   * TELEGRAM INIT
+   ********************************************************************/
   const tg = window.Telegram?.WebApp;
   if (tg) {
     tg.ready();
     tg.expand();
-    tg.MainButton.onClick(sendToBotAndGenerateDoc);
-    updateMainButton();
   }
 
+  /********************************************************************
+   * ДАННЫЕ (как у тебя)
+   ********************************************************************/
   const DB = {
     "Блок-секция 1": { n: ["2","3","4","5"], l: ["С","У","Ф","Ф/1","Ш","Ш/1","Э","Э/1","Ю","Я","ББ"] },
     "Блок-секция 2": { n: ["1","2","3","4","5"], l: ["Е","И","И/1","К","Л","М","М/2","Н","П","Р"] },
@@ -133,8 +154,19 @@
     "ТД МЗ ЖБИ": "ООО «ТД Майминский завод ЖБИ», 649100, Республика Алтай, Майминский район, село Майма, ул. Энергетиков, д.26/1"
   };
 
+  /********************************************************************
+   * STATE
+   ********************************************************************/
+
+  // Сессия документа — чтобы backend и бот связали фото с этим предписанием
+  const SESSION_ID = "S" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+
+  // items: { id, floor, axes, structure, issue, photosCount }
   let items = [];
 
+  /********************************************************************
+   * INIT UI
+   ********************************************************************/
   const selBuild = document.getElementById('build');
   for (let k in DB) {
     const opt = document.createElement('option');
@@ -162,13 +194,18 @@
     if (selBuild.selectedIndex === 0) return alert("Выберите объект!");
     document.getElementById('screen1').classList.add('hidden');
     document.getElementById('screen2').classList.remove('hidden');
+    updateMainButton();
   }
 
   function back() {
     document.getElementById('screen2').classList.add('hidden');
     document.getElementById('screen1').classList.remove('hidden');
+    updateMainButton();
   }
 
+  /********************************************************************
+   * AXES + ITEMS
+   ********************************************************************/
   function getAx(id) {
     const v = document.getElementById(id).value;
     return v === '-' ? '' : v;
@@ -202,7 +239,8 @@
       floor: document.getElementById('floor').value,
       axes: axesText,
       structure: document.getElementById('str').value,
-      issue
+      issue,
+      photosCount: 0
     });
 
     document.getElementById('txt').value = "";
@@ -216,12 +254,62 @@
     updateMainButton();
   }
 
-  function openBotForPhoto(itemId) {
-    if (!tg) { alert("Откройте Mini App внутри Telegram."); return; }
-    const link = `https://t.me/${BOT_USERNAME}?start=photo_${encodeURIComponent(itemId)}`;
-    tg.openTelegramLink(link);
+  /********************************************************************
+   * PHOTO: camera/gallery -> upload to backend -> backend sends to bot
+   ********************************************************************/
+  function pickPhoto(itemId) {
+    if (!tg) return alert("Откройте Mini App внутри Telegram.");
+    if (!UPLOAD_URL || UPLOAD_URL.includes("YOUR-DOMAIN.COM")) {
+      return alert("Нужно указать UPLOAD_URL (адрес вашего сервера).");
+    }
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.capture = "environment"; // попробует открыть камеру на мобильных
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      // маленькая защита: не отправлять слишком большие фото (по желанию)
+      // if (file.size > 12 * 1024 * 1024) return alert("Слишком большой файл (>12MB)");
+
+      try {
+        await uploadPhotoToBackend(itemId, file);
+        const it = items.find(x => x.id === itemId);
+        if (it) it.photosCount += 1;
+        render();
+      } catch (e) {
+        alert("Не удалось отправить фото: " + (e?.message || e));
+      }
+    };
+    input.click();
   }
 
+  async function uploadPhotoToBackend(itemId, file) {
+    const initData = tg.initData; // backend обязан проверить подпись!
+    if (!initData) throw new Error("Нет initData. Откройте Mini App внутри Telegram.");
+
+    const form = new FormData();
+    form.append("initData", initData);
+    form.append("session_id", SESSION_ID);
+    form.append("item_id", itemId);
+    form.append("photo", file, file.name || "photo.jpg");
+
+    const resp = await fetch(UPLOAD_URL, { method: "POST", body: form });
+    if (!resp.ok) {
+      const txt = await resp.text().catch(()=> "");
+      throw new Error("HTTP " + resp.status + (txt ? (": " + txt) : ""));
+    }
+
+    // ожидаем JSON вида: { ok: true } или { ok:false, error:"..." }
+    const data = await resp.json().catch(()=> ({}));
+    if (!data.ok) throw new Error(data.error || "upload failed");
+  }
+
+  /********************************************************************
+   * RENDER
+   ********************************************************************/
   function render() {
     const list = document.getElementById('list');
     if (items.length === 0) { list.innerHTML = ""; return; }
@@ -234,9 +322,10 @@
             <div class="small">ID: <code>${escapeHtml(i.id)}</code></div>
             <div>(${escapeHtml(i.floor)}, ${escapeHtml(i.axes)})</div>
             <div>${escapeHtml(i.issue)}</div>
+            <div class="small">Фото: <b>${i.photosCount}</b></div>
           </div>
           <div class="item-actions">
-            <button type="button" class="btn-photo" onclick="openBotForPhoto('${escapeJs(i.id)}')">📷 Фото к этому</button>
+            <button type="button" class="btn-photo" onclick="pickPhoto('${escapeJs(i.id)}')">📷 Фото</button>
             <button type="button" class="btn-del" onclick="removeItem(${idx})">Удалить</button>
           </div>
         </div>
@@ -244,33 +333,34 @@
     `).join('');
   }
 
-  function updateMainButton() {
-    if (!tg) return;
-    if (items.length === 0) { tg.MainButton.hide(); return; }
-    tg.MainButton.setText(`СФОРМИРОВАТЬ ДОКУМЕНТ (${items.length})`);
-    tg.MainButton.show();
-    tg.MainButton.enable();
-  }
-
+  /********************************************************************
+   * SEND: "СФОРМИРОВАТЬ ДОКУМЕНТ"
+   * Mini App -> tg.sendData(payload)
+   * Бот должен:
+   *  - получить web_app_data
+   *  - сформировать .docx
+   *  - отправить документ
+   *  - вывести в чат отчёт: какие фото к какому замечанию (по session_id + item_id)
+   ********************************************************************/
   async function sendToBotAndGenerateDoc() {
-    if (!tg) { alert("Откройте Mini App внутри Telegram."); return; }
+    if (!tg) return alert("Откройте Mini App внутри Telegram.");
     if (items.length === 0) return alert("Список пуст");
 
     tg.MainButton.showProgress();
     tg.MainButton.disable();
 
     const cName = document.getElementById('contr').value;
-
     const payload = {
       action: "create_prescription_multi",
+      session_id: SESSION_ID,
       building: selBuild.value,
       contractor_info: CONTRACTORS_FULL[cName] || cName,
-      items
+      items: items.map(({photosCount, ...rest}) => rest) // фото в документ не вставляем
     };
 
     try {
       tg.sendData(JSON.stringify(payload));
-      tg.close(); // бот пришлёт .docx в чат
+      tg.close(); // бот пришлёт .docx и отчёт в чат
     } catch (e) {
       alert("Не удалось отправить данные боту.\nОткройте Mini App через кнопку в боте.");
       tg.MainButton.hideProgress();
@@ -278,6 +368,21 @@
     }
   }
 
+  function updateMainButton() {
+    if (!tg) return;
+    if (document.getElementById('screen2').classList.contains('hidden')) {
+      tg.MainButton.hide();
+      return;
+    }
+    if (items.length === 0) { tg.MainButton.hide(); return; }
+    tg.MainButton.setText(`СФОРМИРОВАТЬ ДОКУМЕНТ (${items.length})`);
+    tg.MainButton.show();
+    tg.MainButton.onClick(sendToBotAndGenerateDoc);
+  }
+
+  /********************************************************************
+   * HELPERS
+   ********************************************************************/
   function escapeHtml(s) {
     return String(s)
       .replaceAll("&", "&amp;")
