@@ -108,20 +108,8 @@
   </div>
 
 <script>
-  /********************************************************************
-   * НАСТРОЙКИ (ВАЖНО)
-   ********************************************************************/
 
-  // 1) URL вашего BACKEND (HTTPS!), который принимает фото и сам отправляет в бот.
-  //    Backend должен:
-  //    - проверить tg.initData (подпись)
-  //    - отправить фото в Telegram Bot API
-  //    - сохранить привязку: session_id + item_id -> message_id/photo
-  //
-  // Endpoint принимает multipart/form-data:
-  //   initData, session_id, item_id, photo
-  //
-  const UPLOAD_URL = "https://YOUR-DOMAIN.COM/upload_photo";
+  const UPLOAD_URL = https://s3.ru1.storage.beget.cloud;
 
   /********************************************************************
    * TELEGRAM INIT
